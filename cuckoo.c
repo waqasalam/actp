@@ -226,7 +226,6 @@ rehash(struct cuckoo_hash **h) {
                     cuckoo_hash_update_bucket(new_entry, old_entry->key, old_entry->value);
                     continue;
                 }
-
                 new_entry = cuckoo_hash_get_second_entry(new_hash, old_entry->key);
 
                 if (new_entry->key == EMPTY_BUCKET) {
@@ -241,7 +240,6 @@ rehash(struct cuckoo_hash **h) {
         }   
     }
     if ((*h)->evicted) {
-        
         key = (*h)->ekey;
         value = (*h)->evalue;
         new_entry = cuckoo_hash_get_first_entry(new_hash, key);
@@ -261,7 +259,7 @@ rehash(struct cuckoo_hash **h) {
             goto success;
         }
     }
-    // couldn't put in the evicted entry
+    // we still have a left over entry...
     if ((*h)->evicted) {
         new_hash->evicted = true;
         new_hash->ekey = key;

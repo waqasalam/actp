@@ -6,6 +6,34 @@
 #include "cuckoo.h"
 
 static int
+test_basic_func1(int key, struct cuckoo_hash *h) {
+    return key;
+}
+
+static int
+test_basic_func2(int key, struct cuckoo_hash *h) {
+    return key + 3 % h->num_buckets;
+}
+
+static void
+test_basic() {
+    struct cuckoo_hash *h;
+    int input[][10] = {{0, 4}, {1, 250}, {3, 153}, {4, 175}, {5,200}, {6, 167}, {7, 205}, {8, 103}, {9, 136}};
+
+    printf("\nTEST BASIC \n");
+    printf("Basic test which directly puts key in slots \n");
+    printf("This test also takes care special zero value \n");
+    int size = sizeof(input)/sizeof(input[0]);
+    h = (struct cuckoo_hash *)calloc(1, sizeof(*h));
+    cuckoo_hash_init(h, test_basic_func1, test_basic_func2, size);
+
+    for (int i=0; i<size; i++) {
+        h = cuckoo_hash_insert_key(h, input[i][0], input[i][1]);
+    }
+    dump_hash(h);
+}
+
+static int
 test_hash_func1(int key, struct cuckoo_hash *h) {
     return key % h->num_buckets;
 }
@@ -22,7 +50,6 @@ test_add_delete() {
 
     int size = sizeof(input)/sizeof(input[0]);
     h = (struct cuckoo_hash *)calloc(1, sizeof(*h));
-    
     cuckoo_hash_init(h, test_hash_func1, test_hash_func2, size);
 
     printf("TEST ADD DELETE\n");
@@ -67,11 +94,11 @@ test_loop() {
         assert(cuckoo_hash_lookup(h, input[i][0], &value));
     }
     dump_hash(h);
-
 }
 
 int
 main(int argc, char **argv) {
+    test_basic();
     test_add_delete();
     test_loop();
-}
+ }

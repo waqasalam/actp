@@ -24,7 +24,7 @@ struct cuckoo_hash
     int evalue;    // Value associated with evicted entry.
     bool zeroidset;  // Key with value zero indicated empty slot. The actual
                      // key with zero value is stored in this location.
-    bool zeroidvalue;
+    int zeroidvalue;
     struct bucket **buckets;
 };
 
