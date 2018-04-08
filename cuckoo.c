@@ -6,11 +6,17 @@
 
 #include "cuckoo.h"
 
+// ID for first table
 #define FIRST_BUCKET_ID 0
+// ID for second table
 #define SECOND_BUCKET_ID 1
+// Key value of 0 indicate bucket is empty
 #define EMPTY_BUCKET 0
+// Total number of tables
 #define TOTAL_BUCKET_ID 2
-#define DEBUG 1
+// Once we get into a loop increase table size this will change the hash function
+#define SIZE_INCREASE 2
+
 void
 cuckoo_hash_init(struct cuckoo_hash *h, hash_func func1, hash_func func2, uint32_t num_entries) {
     memset(h, 0, sizeof(*h));
@@ -63,6 +69,7 @@ hash_for_id(struct cuckoo_hash *h, int id, int key) {
     return hash;
 }
 
+// Get the entry from first table
 struct bucket *
 cuckoo_hash_get_first_entry(struct cuckoo_hash *h, int key) {
     struct bucket *entry;
@@ -74,6 +81,7 @@ cuckoo_hash_get_first_entry(struct cuckoo_hash *h, int key) {
     return entry;
 }
 
+// Get the entry from second table
 struct bucket *
 cuckoo_hash_get_second_entry(struct cuckoo_hash *h, int key) {
     struct bucket *entry;
@@ -85,6 +93,7 @@ cuckoo_hash_get_second_entry(struct cuckoo_hash *h, int key) {
     return entry;
 }
 
+// Check if entry already present and we need to update
 static bool
 check_update(struct cuckoo_hash *h, int key, int value, int idx1, int idx2) {
     struct bucket *entry;
@@ -108,7 +117,7 @@ static bool
 add_entry(struct cuckoo_hash *h, int id, int idx, int key, int value) {
     struct bucket *entry;
 
-    if (key == 0) {
+    if (key == EMPTY_BUCKET) {
         if (!h->zeroidset) {
             h->zeroidset = true;
             h->zeroidvalue = value;
@@ -178,18 +187,12 @@ insert(struct cuckoo_hash *h, int key, int value, int idx1, int idx2) {
     entry = cuckoo_hash_get_entry(h, FIRST_BUCKET_ID, idx1);
     if (entry->key == EMPTY_BUCKET) {
         cuckoo_hash_update_bucket(entry, key, value);
-#ifdef DEBUG
-        printf("use first entry for %d (k(%d)/v(%d)", key, entry->key, entry->value);
-#endif
         return true;
     }
 
     // check if bucket in second table is free
     entry = cuckoo_hash_get_entry(h, SECOND_BUCKET_ID, idx2);
     if (entry->key == EMPTY_BUCKET) {
-#ifdef DEBUG
-        printf("use second entry for %d", key);
-#endif
         cuckoo_hash_update_bucket(entry, key, value);
         return true;
     }
@@ -209,7 +212,7 @@ rehash(struct cuckoo_hash **h) {
     
     new_hash = (struct cuckoo_hash *)calloc(1, sizeof(*new_hash));
     
-    new_hash->num_buckets = (*h)->num_buckets;
+    new_hash->num_buckets = (*h)->num_buckets + SIZE_INCREASE;
      
     new_hash->buckets = (struct bucket **)calloc(2, sizeof(*new_hash->buckets));
     assert(new_hash->buckets != NULL);
@@ -281,6 +284,7 @@ rehash(struct cuckoo_hash **h) {
         new_hash->evalue = value;
     }
     cuckoo_hash_destroy(*h);
+    *h = new_hash;
     return false;
 success:
     cuckoo_hash_destroy(*h);
