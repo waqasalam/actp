@@ -31,6 +31,7 @@ test_basic() {
         h = cuckoo_hash_insert_key(h, input[i][0], input[i][1]);
     }
     dump_hash(h);
+    cuckoo_hash_destroy(h);
 }
 
 static int
@@ -94,6 +95,7 @@ test_loop() {
         assert(cuckoo_hash_lookup(h, input[i][0], &value));
     }
     dump_hash(h);
+    cuckoo_hash_destroy(h);
 }
 
 int

@@ -29,7 +29,7 @@ struct cuckoo_hash
 
 // Initialize the hash datastructure.
 // Hash is organized with two tables and each table has it's own hash function
-void cuckoo_hash_init(struct cuckoo_hash *, hash_func func1, hash_func func2, uint32_t num_entries);
+void cuckoo_hash_init(struct cuckoo_hash *, hash_func func1, hash_func func2, int num_entries);
 
 // This functions tries adding an entry to hash table.
 // (1) Try first hash function.

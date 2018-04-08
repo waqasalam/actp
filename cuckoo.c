@@ -18,7 +18,7 @@
 #define SIZE_INCREASE 2
 
 void
-cuckoo_hash_init(struct cuckoo_hash *h, hash_func func1, hash_func func2, uint32_t num_entries) {
+cuckoo_hash_init(struct cuckoo_hash *h, hash_func func1, hash_func func2, int num_entries) {
     memset(h, 0, sizeof(*h));
     
     h->buckets = (struct bucket **)calloc(2, sizeof(*h->buckets));
@@ -146,7 +146,7 @@ greedy_insert(struct cuckoo_hash *h, int key, int value, int idx) {
             return true;
         }
         
-        // get the current entry in the position and replace it.
+        // since add failed get the current entry in the position and replace it.
         entry = cuckoo_hash_get_entry(h, id, idx);
         ekey = entry->key;
         evalue = entry->value;
@@ -159,6 +159,7 @@ greedy_insert(struct cuckoo_hash *h, int key, int value, int idx) {
 
         idx = hash_for_id(h, id, key);
     }
+    // save the evicted entry which couldn't fit for rehash
     h->evicted = true;
     h->ekey = key;
     h->evalue = value;
@@ -239,6 +240,7 @@ rehash(struct cuckoo_hash **h) {
             }
         }   
     }
+    // add the evicted entry
     if ((*h)->evicted) {
         key = (*h)->ekey;
         value = (*h)->evalue;
@@ -285,7 +287,7 @@ cuckoo_hash_insert_key(struct cuckoo_hash *h, int key, int value) {
     // As key with 0 value indicates empty slot. key with zero value are
     // handled as a special entry. 
 
-    if (key == 0) {
+    if (key == EMPTY_BUCKET) {
         h->zeroidset = true;
         h->zeroidvalue = value;
         return h;
