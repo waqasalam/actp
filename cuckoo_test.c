@@ -59,7 +59,6 @@ test_init() {
 
     cuckoo_hash_init(&h, test_hash_func1, test_hash_func2, size);
 
-
     for (int i = 0; i < size; i++) {
         cuckoo_hash_insert_key(&h, input[i][0], input[i][1]);
     }
@@ -120,7 +119,6 @@ test_second() {
 
 int
 main(int argc, char **argv) {
-
-    //  test_first();
+    test_first();
     test_second();
 }
