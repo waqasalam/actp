@@ -39,7 +39,7 @@ void cuckoo_hash_init(struct cuckoo_hash *, hash_func func1, hash_func func2, in
 // the evicted entry in the other slot and continue (3) until all entries have
 // been tried or an empty slot is found.
 // (4) If empty slot still not found increase size of hash table which results
-// in new hash entries and retry adding all the entries in the hash table.
+// in new hash entries. Retry adding all the entries in this hash table.
 struct cuckoo_hash * cuckoo_hash_insert_key(struct cuckoo_hash *h, int key, int value);
 
 // Delete key from hash table.
