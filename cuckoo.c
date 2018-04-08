@@ -76,7 +76,6 @@ cuckoo_hash_get_first_entry(struct cuckoo_hash *h, int key) {
     uint32_t idx;
 
     idx = hash_for_id(h, FIRST_BUCKET_ID, key);
-    printf("get first %d  idx %d\n", key,  idx);
     entry = cuckoo_hash_get_entry(h, FIRST_BUCKET_ID, idx);
     return entry;
 }
@@ -88,7 +87,6 @@ cuckoo_hash_get_second_entry(struct cuckoo_hash *h, int key) {
     uint32_t idx;
 
     idx = hash_for_id(h, SECOND_BUCKET_ID, key);
-    printf("get second %d  idx %d\n", key,  idx);
     entry = cuckoo_hash_get_entry(h, SECOND_BUCKET_ID, idx);
     return entry;
 }
@@ -126,7 +124,6 @@ add_entry(struct cuckoo_hash *h, int id, int idx, int key, int value) {
     }
 
     entry = cuckoo_hash_get_entry(h, id, idx);
-    printf("add_entry %d %d %d %d\n", entry->key, entry->value, idx, id);
     if (entry->key == EMPTY_BUCKET) {
         cuckoo_hash_update_bucket(entry, key, value);
         return true;
@@ -138,7 +135,6 @@ add_entry(struct cuckoo_hash *h, int id, int idx, int key, int value) {
 static bool
 greedy_insert(struct cuckoo_hash *h, int key, int value, int idx) {
     int id = 0; //start with id 0
-    printf("start greedy %d\n", idx);
     // We'll end up in a loop if there are multiple connected components with
     // a loop.
     for (int i = 0; i < h->num_buckets; i++) {
@@ -147,25 +143,21 @@ greedy_insert(struct cuckoo_hash *h, int key, int value, int idx) {
         int evalue;
 
         if (add_entry(h, id, idx,  key, value)) {
-            printf("added %d idx %d k %d v %d\n", id,  idx, key, value);
             return true;
         }
         
         // get the current entry in the position and replace it.
         entry = cuckoo_hash_get_entry(h, id, idx);
-        printf("current entry %d %d\n", entry->key, entry->value);
         ekey = entry->key;
         evalue = entry->value;
 
         cuckoo_hash_update_bucket(entry, key, value);
-        printf("updated entry %d %d id %d\n", entry->key, entry->value, id);
         // try adding evicted entry in alternate position
         id = (id+1)%2;
         key = ekey;
         value = evalue;
 
         idx = hash_for_id(h, id, key);
-        printf("current entry %d %d try idx %d\n", key, value, idx);
     }
     h->evicted = true;
     h->ekey = key;
@@ -182,7 +174,6 @@ insert(struct cuckoo_hash *h, int key, int value, int idx1, int idx2) {
     if (check_update(h, key, value, idx1, idx2)) {
         return true;
     }
-    printf("k%d v%d %d %d\n", key, value, idx1, idx2);
     // check if bucket in first table is free
     entry = cuckoo_hash_get_entry(h, FIRST_BUCKET_ID, idx1);
     if (entry->key == EMPTY_BUCKET) {
@@ -230,11 +221,9 @@ rehash(struct cuckoo_hash **h) {
         for(int i=0; i < (*h)->num_buckets; i++) {
             old_entry = &((*h)->buckets[j][i]);
             if (old_entry->key != EMPTY_BUCKET) {
-                printf("old entry %d %d id %d bucket %d\n", old_entry->key, old_entry->value, j, i);
                 new_entry = cuckoo_hash_get_first_entry(new_hash, old_entry->key);
                 if (new_entry->key == EMPTY_BUCKET) {
                     cuckoo_hash_update_bucket(new_entry, old_entry->key, old_entry->value);
-                    printf("new entry first slot\n");         
                     continue;
                 }
 
@@ -242,11 +231,9 @@ rehash(struct cuckoo_hash **h) {
 
                 if (new_entry->key == EMPTY_BUCKET) {
                     cuckoo_hash_update_bucket(new_entry, old_entry->key, old_entry->value);
-                    printf("new entry second slot\n");         
                     continue;
                 }
                 idx = (*h)->func1(old_entry->key, *h);
-                printf("use greedy\n");
                 if(greedy_insert(new_hash, old_entry->key, old_entry->value, idx)) {
                     continue;
                 }
@@ -257,18 +244,15 @@ rehash(struct cuckoo_hash **h) {
         
         key = (*h)->ekey;
         value = (*h)->evalue;
-        printf("evicted entry %d %d\n", key, value);
         new_entry = cuckoo_hash_get_first_entry(new_hash, key);
         if (new_entry->key == EMPTY_BUCKET) {
             cuckoo_hash_update_bucket(new_entry, key, value);
-            printf("evicted entry first slot\n");
             goto success;
         }
 
         new_entry = cuckoo_hash_get_second_entry(new_hash, key);
         if (new_entry->key == EMPTY_BUCKET) {
             cuckoo_hash_update_bucket(new_entry, key, value);
-            printf("new evicted second slot\n");
             goto success;
         }
     
@@ -285,7 +269,12 @@ rehash(struct cuckoo_hash **h) {
     }
     cuckoo_hash_destroy(*h);
     *h = new_hash;
-    return false;
+    // keep rehashing...
+    if (rehash(&new_hash)) {
+        *h = new_hash;
+        return true;
+    }
+
 success:
     cuckoo_hash_destroy(*h);
     *h = new_hash;
@@ -307,18 +296,44 @@ cuckoo_hash_insert_key(struct cuckoo_hash *h, int key, int value) {
     // for CPU intensive hashes    
     int idx1 = h->func1(key, h);
     int idx2 = h->func2(key, h);
-    printf("idx1 %d, idx2  %d for key %d\n", idx1, idx2, key);
+
     while (true) {
         if (insert(h, key, value, idx1, idx2)) {
             return h;
         }
-        printf("hash before rehash %p", h);
         if (rehash(&h)) {
-            printf("hash after rehash %p", h);
             return h;
         }
 
     }
+}
+
+bool
+cuckoo_hash_delete_key(struct cuckoo_hash *h, int key) {
+    struct bucket *entry;
+
+    if (key == EMPTY_BUCKET) {
+        if (!h->zeroidset) {
+            return false;
+        } else {
+            h->zeroidset = false;
+            return true;
+        }
+    }
+
+    entry = cuckoo_hash_get_first_entry(h, key);
+    if (entry->key == key) {
+        cuckoo_hash_update_bucket(entry, EMPTY_BUCKET, 0);
+        return true;
+    }
+
+    entry = cuckoo_hash_get_second_entry(h, key);
+    if (entry->key == key) {
+        cuckoo_hash_update_bucket(entry, EMPTY_BUCKET, 0);
+        return true;
+    }
+
+    return false;
 }
 
 bool
@@ -335,25 +350,14 @@ cuckoo_hash_lookup(struct cuckoo_hash *h, int key, int *value) {
     }
     entry = cuckoo_hash_get_first_entry(h, key);
     if (entry->key == key) {
-#ifdef DEBUG
-    printf("found first entry for %d %d\n", entry->key, entry->value);
-#endif
         *value = entry->value;
         return true;
     }
-    printf("not found first entry for %d %d\n", entry->key, entry->value);
     entry = cuckoo_hash_get_second_entry(h, key);
     if (entry->key == key) {
-#ifdef DEBUG
-        printf("use first entry for %d", key);
-#endif
         *value = entry->value;
         return true;
     }
-    printf("not found sec entry for %d %d\n", entry->key, entry->value);
-#ifdef DEBUG
-        printf("entry not found for %d", key);
-#endif
     return false;
 }
 
@@ -368,6 +372,9 @@ dump_hash(struct cuckoo_hash *h) {
                 printf("%-8d   %-6d   %-10d   %-7d\n", j, i, entry->key, entry->value);
             }
         }
+    }
+    if (h->zeroidset) {
+        printf("\n Value of Key 0: %d\n", h->zeroidvalue);
     }
 }
 
