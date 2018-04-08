@@ -14,7 +14,6 @@ struct bucket {
 
 struct cuckoo_hash
 {
-    uint32_t count;
     int num_buckets;
     hash_func func1;
     hash_func func2;

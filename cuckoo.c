@@ -73,7 +73,7 @@ hash_for_id(struct cuckoo_hash *h, int id, int key) {
 struct bucket *
 cuckoo_hash_get_first_entry(struct cuckoo_hash *h, int key) {
     struct bucket *entry;
-    uint32_t idx;
+    int idx;
 
     idx = hash_for_id(h, FIRST_BUCKET_ID, key);
     entry = cuckoo_hash_get_entry(h, FIRST_BUCKET_ID, idx);
@@ -84,7 +84,7 @@ cuckoo_hash_get_first_entry(struct cuckoo_hash *h, int key) {
 struct bucket *
 cuckoo_hash_get_second_entry(struct cuckoo_hash *h, int key) {
     struct bucket *entry;
-    uint32_t idx;
+    int idx;
 
     idx = hash_for_id(h, SECOND_BUCKET_ID, key);
     entry = cuckoo_hash_get_entry(h, SECOND_BUCKET_ID, idx);
